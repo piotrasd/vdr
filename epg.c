@@ -661,6 +661,27 @@ static void StripControlCharacters(char *s)
      }
 }
 
+static void ConvertFromISO6937(char *text)
+{
+  // Convert text from iso6937 to iso8859-2 (only if text contains one of 0xC1..0xC8, 0xCA, 0xCB, 0xCD..0xCF)
+  //  if (!text || strcspn(text, "\xC1\xC2\xC3\xC4\xC5\xC6\xC7\xC8\xCA\xCB\xCD\xCE\x41\x61\xCF") == strlen(text)) return;
+  if (!text || strcspn(text, "\xC1\xC2\xC3\xC4\xC5\xC6\xC7\xC8\xCA\xCB\xCD\xCE\xCF\x41\x61\xE8\xF8\x65") == strlen(text)) return;
+  char *buffer = strdup(text);
+  iconv_t ic = iconv_open("iso8859-2", "iso6937");
+  if (ic >= 0) {
+     char *in = text;
+     char *out = buffer;
+     size_t inbytesleft = strlen(text);
+     size_t outbytesleft = inbytesleft;
+     if (iconv(ic, &in, &inbytesleft, &out, &outbytesleft) != (size_t)(-1)) {
+        *out = 0;
+        strcpy(text, buffer);
+        }
+     }
+  iconv_close(ic);
+  free(buffer);
+}
+
 void cEvent::FixEpgBugs(void)
 {
   if (isempty(title)) {
@@ -874,6 +895,10 @@ Final:
   StripControlCharacters(title);
   StripControlCharacters(shortText);
   StripControlCharacters(description);
+
+  ConvertFromISO6937(title);
+  ConvertFromISO6937(shortText);
+  ConvertFromISO6937(description);
 }
 
 // --- cSchedule -------------------------------------------------------------
